@@ -1,0 +1,26 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# JUCE Files
+**JuceLibraryCode/
+**/Builds/
+**/build/
+**/JUCE/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Files
+.DS_Store
