@@ -23,8 +23,16 @@ project(AUDIO_PLUGIN_EXAMPLE VERSION 0.0.1)
 
 # find_package(JUCE CONFIG REQUIRED)        # If you've installed JUCE to your system
 # or
-add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
+# add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
+# JUCE Fetch from GitHub 
+#include(FetchContent)
+#FetchContent_Declare(JUCE
+#    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+#    GIT_TAG origin/master
+#)
+#FetchContent_MakeAvailable(JUCE)
+include(external/Dependencies.cmake)
 # If you are building a VST2 or AAX plugin, CMake needs to be told where to find these SDKs on your
 # system. This setup should be done before calling `juce_add_plugin`.
 
