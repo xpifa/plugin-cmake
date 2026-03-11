@@ -77,6 +77,7 @@ juce_add_plugin(AudioDistortionPlugin
 
 target_sources(AudioDistortionPlugin
     PRIVATE
+        DSP/Gain.cpp
         PluginEditor.cpp
         PluginProcessor.cpp)
 

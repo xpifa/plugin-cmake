@@ -3,15 +3,17 @@
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+         : AudioProcessor (BusesProperties()
+                                         #if ! JucePlugin_IsMidiEffect
+                                            #if ! JucePlugin_IsSynth
+                                             .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                                            #endif
+                                             .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
+                                         #endif
+                                             ),
+             apvts (*this, nullptr, "Parameters", createParameterLayout())
 {
+        gainDbParam = apvts.getRawParameterValue ("gainDb");
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -86,9 +88,10 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    gain.prepare (sampleRate);
+    gain.reset();
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -139,18 +142,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
-    }
+    const auto gainDb = gainDbParam != nullptr ? gainDbParam->load() : 0.0f;
+    gain.setGainDecibels (gainDb);
+    gain.process (buffer);
 }
 
 //==============================================================================
@@ -167,17 +161,55 @@ juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor()
 //==============================================================================
 void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+    if (auto state = apvts.copyState().createXml())
+        copyXmlToBinary (*state, destData);
 }
 
 void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+    if (auto xmlState = getXmlFromBinary (data, sizeInBytes))
+    {
+        if (xmlState->hasTagName (apvts.state.getType()))
+            apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+    }
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParameterLayout()
+{
+    using juce::AudioParameterFloat;
+    using juce::AudioProcessorValueTreeState;
+    using juce::NormalisableRange;
+
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
+
+    const auto range = NormalisableRange<float> (dsp::Gain::minGainDb, dsp::Gain::maxGainDb, 0.01f);
+
+    auto attributes = juce::AudioParameterFloatAttributes()
+        .withStringFromValueFunction ([] (float value, int)
+        {
+            if (value <= dsp::Gain::minGainDb + 0.001f)
+                return juce::String ("-inf dB");
+
+            return juce::String (value, 1) + " dB";
+        })
+        .withValueFromStringFunction ([] (const juce::String& text)
+        {
+            const auto trimmedText = text.trim();
+
+            if (trimmedText.equalsIgnoreCase ("-inf") || trimmedText.equalsIgnoreCase ("-inf dB"))
+                return dsp::Gain::minGainDb;
+
+            return trimmedText.upToFirstOccurrenceOf ("dB", false, false).trim().getFloatValue();
+        });
+
+    parameters.push_back (std::make_unique<AudioParameterFloat> (
+        "gainDb",
+        "Gain",
+        range,
+        0.0f,
+        attributes));
+
+    return { parameters.begin(), parameters.end() };
 }
 
 //==============================================================================

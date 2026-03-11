@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "DSP/Gain.h"
 
 //==============================================================================
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -41,6 +42,16 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+
+private:
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    juce::AudioProcessorValueTreeState apvts;
+    dsp::Gain gain;
+    std::atomic<float>* gainDbParam = nullptr;
+
+public:
+    juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
 
 private:
     //==============================================================================

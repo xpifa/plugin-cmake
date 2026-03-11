@@ -5,9 +5,17 @@
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
-    juce::ignoreUnused (processorRef);
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    gainSlider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+    gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 22);
+    gainSlider.setTextValueSuffix (" dB");
+    gainSlider.setDoubleClickReturnValue (true, 0.0);
+    addAndMakeVisible (gainSlider);
+
+    gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+        processorRef.getAPVTS(),
+        "gainDb",
+        gainSlider);
+
     setSize (400, 300);
 }
 
@@ -18,16 +26,14 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 //==============================================================================
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll (juce::Colour::fromRGB (26, 29, 33));
 
     g.setColour (juce::Colours::white);
-    g.setFont (55.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    g.setFont (18.0f);
+    g.drawFittedText ("Gain", 0, 18, getWidth(), 24, juce::Justification::centred, 1);
 }
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    gainSlider.setBounds ((getWidth() - 180) / 2, 58, 180, 180);
 }
