@@ -23,11 +23,18 @@ jobs:
 
       # Configure the project using CMake
       - name: Configure CMake
-        run: cmake -B build
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+
+      # Build all targets (including any current/future test executables)
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run CTests
+        run: ctest --test-dir build --output-on-failure --parallel
 
       # Build the plugin in Release mode
       - name: Build Plug-In
-        run: sudo cmake --build build --config Release
+        run: cmake --build build --config Release
 
       # Upload the built plugin in github actions artifact
       - name: Upload Builds to Artifact
