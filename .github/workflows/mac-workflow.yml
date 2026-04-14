@@ -42,3 +42,27 @@ jobs:
         with:
           name: "${{ env.PLUGIN_NAME }}-builds-artifact"
           path: ${{ env.PLUGINS_FOLDER }}
+
+  pluginval:
+    name: QA - Plugin Validation (pluginval)
+    runs-on: macos-14
+    needs: build
+
+    steps:
+      - name: Download plugin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ env.PLUGIN_NAME }}-builds-artifact"
+          path: plug-ins
+
+      - name: Download pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          unzip -q pluginval.zip
+
+      - name: Validate VST3
+        run: |
+          ./pluginval.app/Contents/MacOS/pluginval \
+            --strictness-level 5 \
+            --validate "plug-ins/VST3/Audio_Distortion_Plugin.vst3"
